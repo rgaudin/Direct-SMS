@@ -21,7 +21,7 @@ Setup
 -----
 
 Copy / paste the entire direct_sms folder to the ./apps directory of your 
-project.
+project. Add 'direct_sms' in the app list of your local.ini file.
 
 Usage
 ------
