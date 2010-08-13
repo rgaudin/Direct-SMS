@@ -40,10 +40,16 @@ class App (rapidsms.app.App):
         according to a backend and an indentity.         
         """
         
-        callback = pickle.loads(post.get('callback', 
+        pre_send_callback = pickle.loads(post.get('pre_send_callback', 
                                             PICKLED_LAMBDA)) or return_none
-        callback_kwargs = pickle.loads(post.get('callback_kwargs', 
-                                        PICKLED_DICT)) or {}
+        pre_send_callback_kwargs = pickle.loads(post.get('pre_send_callback_kwargs', 
+                                                         PICKLED_DICT)) or {}
+                                        
+        post_send_callback = pickle.loads(post.get('post_send_callback', 
+                                                   PICKLED_LAMBDA)) or return_none
+        post_send_callback_kwargs = pickle.loads(post.get('post_send_callback_kwargs', 
+                                                           PICKLED_DICT)) or {}
+                                        
         
         backend_slug = post.get('backend', '')
         identity = post.get('identity', '')
@@ -76,9 +82,11 @@ class App (rapidsms.app.App):
         
         message = be.message(identity, post["text"])
         
-        callback(outgoing_message=message, **callback_kwargs)
+        pre_send_callback(outgoing_message=message, **pre_send_callback_kwargs)
         
         sent = message.send()
+        
+        post_send_callback(outgoing_message=message, **post_send_callback_kwargs)
 
         # attempt to call the callback 
         

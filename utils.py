@@ -59,8 +59,8 @@ else:
     def store_log(outgoing_message, model, field='message', 
                   reload_model=False, save=True):
         """
-            Store the message reference into into of field of the given model,
-            but using the new 
+            Store the message reference into a field of the given model,
+            but using the new logger.
             
             Default field is 'message'. If reload_model is True, reload a fresh
             model from the DB before processing. If save is True (default),
@@ -92,13 +92,17 @@ if NO_LOGGER:
 
 def send_msg(reporter=None, text='', 
             callback=None, callback_kwargs=None, 
+            post_send_callback=None, post_send_callback_kwargs=None,
             log_in_model=None, backend='', identity=''):
     '''
     Sends a message to a reporter using the ajax app. This goes to
     ajax_POST_send_message in the app.py.
 
-    If you set a call back, it will be called at the message sending with
+    If you set a call back, it will be called before the message sending with
     the message as first argument, and callback_args as misc kwargs.
+    
+    If you wish to execute something AFTER the message has been sent, go for
+    post_send_callback instead.
 
     Default is to use "store_log" if a model is passed.
     
@@ -108,15 +112,17 @@ def send_msg(reporter=None, text='',
     '''
 
     if log_in_model:
-        callback = store_log
-        callback_kwargs = {'model': log_in_model}
+        post_send_callback = store_log
+        post_send_callback_kwargs = {'model': log_in_model}
 
     conf = settings.RAPIDSMS_APPS['ajax']
     url = "http://%s:%s/direct-sms/send_message" % (conf["host"], conf["port"])
     
     data = {'text': text,
-            'callback': pickle.dumps(callback),
-            'callback_kwargs': pickle.dumps(callback_kwargs)}
+            'pre_send_callback': pickle.dumps(callback),
+            'pre_send_callback_kwargs': pickle.dumps(callback_kwargs),
+            'post_send_callback': pickle.dumps(post_send_callback),
+            'post_send_callback_kwargs': pickle.dumps(post_send_callback_kwargs)}
 
     try:
         data['reporter'] = reporter.pk
