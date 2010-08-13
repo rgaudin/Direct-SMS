@@ -18,17 +18,17 @@ from django.conf import settings
 
 from exceptions import DirectSmsError
 
-LOGGER_CLASS =  None
+LOGGER_CLS =  None
 
 # try to store log using the usual logger
 try:
-    from logger.models import OutgoingMessage as LOGGER_CLASS
+    from logger.models import OutgoingMessage as LOGGER_CLS
 except ImportError:
     pass
     
 # try to store log using the new logger  
 try:
-    from logger_ng.models import LoggedMessage as LOGGER_CLASS
+    from logger_ng.models import LoggedMessage as LOGGER_CLS
 except ImportError:
     pass
         
@@ -37,13 +37,14 @@ def store_log(outgoing_message, model, field='message',
         """
             Store the message reference into into a field of the given model.
             
+            It's a convenience function for something we do often.
+            
             Default field is 'message'. If reload_model is True, reload a fresh
             model from the DB before processing. If save is True (default),
             the model will be saved.
         """
         
-        outoing_message = LOGGER_CLASS.objects\
-                                         .get(pk=outgoing_message.logger_id)
+        outoing_message = LOGGER_CLS.objects.get(pk=outgoing_message.logger_id)
         
         if reload_model:
             model = model.__class__.objects.get(pk=r.pk)
@@ -55,7 +56,7 @@ def store_log(outgoing_message, model, field='message',
             
             
 # no logger present, this shorcut can't work
-if LOGGER_CLASS
+if not LOGGER_CLS:
 
     def store_log(outgoing_message, model, field='message', 
                   reload_model=False, save=True):
