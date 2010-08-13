@@ -18,26 +18,31 @@ from django.conf import settings
 
 from exceptions import DirectSmsError
 
-NO_LOGGER = True
+LOGGER_CLASS =  None
 
 # try to store log using the usual logger
 try:
-    from logger.models import OutgoingMessage
+    from logger.models import OutgoingMessage as LOGGER_CLASS
 except ImportError:
     pass
-else:
-    NO_LOGGER = False
-    def store_log(outgoing_message, model, field='message', 
+    
+# try to store log using the new logger  
+try:
+    from logger_ng.models import LoggedMessage as LOGGER_CLASS
+except ImportError:
+    pass
+        
+def store_log(outgoing_message, model, field='message', 
                   reload_model=False, save=True):
         """
-            Store the message reference into into of field of the given model.
+            Store the message reference into into a field of the given model.
             
             Default field is 'message'. If reload_model is True, reload a fresh
             model from the DB before processing. If save is True (default),
             the model will be saved.
         """
         
-        outoing_message = OutgoingMessage.objects\
+        outoing_message = LOGGER_CLASS.objects\
                                          .get(pk=outgoing_message.logger_id)
         
         if reload_model:
@@ -47,47 +52,18 @@ else:
 
         if save:
             model.save()
-    
-    
-# try to store log using the new logger  
-try:
-    from logger_ng.models import LoggedMessage
-except ImportError:
-    pass
-else:
-    NO_LOGGER = False
-    def store_log(outgoing_message, model, field='message', 
-                  reload_model=False, save=True):
-        """
-            Store the message reference into a field of the given model,
-            but using the new logger.
             
-            Default field is 'message'. If reload_model is True, reload a fresh
-            model from the DB before processing. If save is True (default),
-            the model will be saved.
-        """
-        
-        outoing_message = LoggedMessage.objects\
-                                       .get(pk=outgoing_message.logger_id)
-        
-        if reload_model:
-            model = model.__class__.objects.get(pk=r.pk)
-
-        model.__dict__[field] = outgoing_message
-
-        if save:
-            model.save() 
-    
-    
+            
 # no logger present, this shorcut can't work
-if NO_LOGGER:
+if LOGGER_CLASS
+
     def store_log(outgoing_message, model, field='message', 
                   reload_model=False, save=True):
         """
             Prevent this fonction to be used.
         """
         raise DirectSmsError(u"No compatible logger application is present")
-        
+
 
 
 def send_msg(reporter=None, text='', 
