@@ -14,9 +14,13 @@ except ImportError:
 import urllib2
 from urllib import urlencode
 
+from httplib import BadStatusLine
+
 from django.conf import settings
 
 from exceptions import DirectSmsError
+
+from rapidsms.contrib.ajax.utils import get_url_prefix
 
 LOGGER_CLS =  None
 
@@ -31,6 +35,7 @@ try:
     from logger_ng.models import LoggedMessage as LOGGER_CLS
 except ImportError:
     pass
+
         
 def store_log(outgoing_message, model, field='message', 
                   reload_model=False, save=True):
@@ -67,7 +72,7 @@ if not LOGGER_CLS:
 
 
 
-def send_msg(reporter=None, text='', 
+def send_msg(contact=None, text='', 
             callback=None, callback_kwargs=None, 
             post_send_callback=None, post_send_callback_kwargs=None,
             log_in_model=None, backend='', identity=''):
@@ -92,8 +97,9 @@ def send_msg(reporter=None, text='',
         post_send_callback = store_log
         post_send_callback_kwargs = {'model': log_in_model}
 
-    conf = settings.RAPIDSMS_APPS['ajax']
-    url = "http://%s:%s/direct-sms/send_message" % (conf["host"], conf["port"])
+    url = "http://%s:%s/%sdirect_sms/send_message" % (
+            settings.AJAX_PROXY_HOST, settings.AJAX_PROXY_PORT,
+            get_url_prefix())
     
     data = {'text': text,
             'pre_send_callback': pickle.dumps(callback),
@@ -101,17 +107,24 @@ def send_msg(reporter=None, text='',
             'post_send_callback': pickle.dumps(post_send_callback),
             'post_send_callback_kwargs': pickle.dumps(post_send_callback_kwargs)}
 
+    header = {'Content-Type':
+              'application/x-www-form-urlencoded; charset=utf-8'}
+
     try:
-        data['reporter'] = reporter.pk
+        data['contact'] = contact.pk
     except AttributeError:
-        pass
+        settings.AJAX_PROXY_HOST
         
     data['backend'] = backend
     data['identity'] = identity
            
-    req = urllib2.Request(url, urlencode(data))
-    stream = urllib2.urlopen(req)
-    stream.close()
+    req = urllib2.Request(url, urlencode(data), header)
+    try:
+        stream = urllib2.urlopen(req)
+        stream.close()
+    except BadStatusLine:
+        pass # the router don't respond anything
+    
 
 
 

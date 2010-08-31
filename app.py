@@ -6,8 +6,10 @@
 Let your send message using Ajax.
 """
 
-import rapidsms
-from reporters.models import Reporter
+from rapidsms.apps.base import AppBase
+from rapidsms.models import Contact, Connection
+from rapidsms.messages.outgoing import OutgoingMessage
+
 
 try:
     import cPickle as pickle
@@ -18,11 +20,11 @@ def return_none(**kwargs): pass
 
 from exceptions import DirectSmsError
 
-PICKLED_LAMBDA = pickle.dumps( return_none)
-PICKLED_DICT = pickle.dumps({})
+PICKLED_LAMBDA = pickle.dumps( return_none).encode('utf-8')
+PICKLED_DICT = pickle.dumps({}).encode('utf-8')
 
 
-class App (rapidsms.app.App):
+class App (AppBase):
     """
     Helper to send a message trough Ajax
     """
@@ -31,56 +33,64 @@ class App (rapidsms.app.App):
         pass
 
 
-    def ajax_POST_send_message(self, urlparser, post):
+    def ajax_POST_send_message(self, params, form):
         """
         Callback method for sending messages from the webui via the ajax app.
 
         You can pass it a serialized callbacks with args, and either choose
         to send a message to a given reporter or to an anonymous one,
-        according to a backend and an indentity.         
+        according to a backend and an identity.         
         """
         
-        pre_send_callback = pickle.loads(post.get('pre_send_callback', 
-                                            PICKLED_LAMBDA)) or return_none
-        pre_send_callback_kwargs = pickle.loads(post.get('pre_send_callback_kwargs', 
-                                                         PICKLED_DICT)) or {}
+        pre_send_callback = form.get('pre_send_callback', 
+                                     PICKLED_LAMBDA).encode('ASCII')
+        pre_send_callback = pickle.loads(pre_send_callback) or return_none
+        
+        pre_send_callback_kwargs = form.get('pre_send_callback_kwargs', 
+                                            PICKLED_DICT).encode('ASCII')
+        pre_send_callback_kwargs = pickle.loads(pre_send_callback_kwargs) or {}
                                         
-        post_send_callback = pickle.loads(post.get('post_send_callback', 
-                                                   PICKLED_LAMBDA)) or return_none
-        post_send_callback_kwargs = pickle.loads(post.get('post_send_callback_kwargs', 
-                                                           PICKLED_DICT)) or {}
+        post_send_callback = form.get('post_send_callback', 
+                                     PICKLED_LAMBDA).encode('ASCII')
+        post_send_callback = pickle.loads(post_send_callback) or return_none
+        
+        post_send_callback_kwargs = form.get('post_send_callback_kwargs', 
+                                            PICKLED_DICT).encode('ASCII')
+        post_send_callback_kwargs = pickle.loads(post_send_callback_kwargs) or {}
                                         
         
-        backend_slug = post.get('backend', '')
-        identity = post.get('identity', '')
+        backend_name = form.get('backend', '')
+        identity = form.get('identity', '')
         
-        if not backend_slug or not identity:
+        if not backend_name or not identity:
+        
             try:
-                rep = Reporter.objects.get(pk=post.get('reporter', -1))
-            except Reporter.DoesNotExist:
+                contact = Contact.objects.get(pk=form.get('contact', -1))
+            except Contact.DoesNotExist:
                 raise DirectSmsError(u"You need to specify either a valid "\
                                      u"reporter or a valid backend & identity")
             else:
-                pconn = rep.connection()
+                connection = contact.default_connection
 
                 # abort if we don't know where to send the message to
                 # (if the device the reporter registed with has been
                 # taken by someone else, or was created in the WebUI)
-                if not pconn:
-                   raise DirectSmsError("%s is unreachable (no connection)" % rep)
+                if not connection:
+                   raise DirectSmsError("%s is unreachable (no connection)" %\
+                                         contact)
                    
-                backend_slug = pconn.backend.slug
-                identity = pconn.identity
-
-        # attempt to send the message
-        be = self.router.get_backend(backend_slug)
-        
-        if not be:
-            raise DirectSmsError(u"The backend '%s' is not installed. "\
-                                 u"Check your 'local.ini' file." \
-                                 % backend_slug )
-        
-        message = be.message(identity, post["text"])
+        else:        
+            # attempt to send the message
+            try:
+                backend = self.router.backends[backend_name]
+            except KeyError:
+                raise DirectSmsError(u"The backend '%s' is not installed. Check "\
+                                     u"your 'settings.py' file." % backend_name )
+            else:
+                connection = Connection(identity=identity, 
+                                        backend=backend.model)
+                                 
+        message = OutgoingMessage(connection, form.get('text', ''))
         
         pre_send_callback(outgoing_message=message, **pre_send_callback_kwargs)
         
@@ -91,4 +101,8 @@ class App (rapidsms.app.App):
         # attempt to call the callback 
         
         return sent
+        
+        
+        
+
         
