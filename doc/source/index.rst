@@ -30,14 +30,14 @@ Usage
 
     from direct_sms.utils import send_msg
     
-    # you can send a message to a reporter
+    # you can send a message to a contact
     
-    reporter = Reporter.objects.all()[0] 
-    send_msg(reporter, "Hello !")
+    contact = Contact.objects.all()[0] 
+    send_msg(contact, "Hello !")
     
     # you can send a message knowing only the backend and identity
     
-    backend = PersistantBackend.objects.get(title='pygsm')
+    backend = 'message_tester'
     identity = "555-555-555"
     send_msg(backend=backend, identity=identity, text="Hello !")
 
