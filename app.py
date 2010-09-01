@@ -87,9 +87,19 @@ class App (AppBase):
                 raise DirectSmsError(u"The backend '%s' is not installed. Check "\
                                      u"your 'settings.py' file." % backend_name )
             else:
-                connection = Connection(identity=identity, 
-                                        backend=backend.model)
-                connection.save()
+                try:
+                    connection = Connection.objects\
+                                           .get_or_create(identity=identity, 
+                                                      backend=backend.model)[0]
+                except Connection.MultipleObjectsReturned:
+                    # if this happen, you have duplicate connections and 
+                    # it's not good... at least use a contact
+                    connection = Connection.objects\
+                                           .filter(identity=identity, 
+                                                   backend=backend.model)\
+                                           .latest('id')
+                    
+                    
                                  
         message = OutgoingMessage(connection, form.get('text', ''))
         
