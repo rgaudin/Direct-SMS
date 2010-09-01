@@ -89,6 +89,7 @@ class App (AppBase):
             else:
                 connection = Connection(identity=identity, 
                                         backend=backend.model)
+                connection.save()
                                  
         message = OutgoingMessage(connection, form.get('text', ''))
         
