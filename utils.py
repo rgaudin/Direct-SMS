@@ -18,6 +18,18 @@ from httplib import BadStatusLine
 
 from django.conf import settings
 
+# try importing settings from django, default on AJAX native settings
+try:
+    AJAX_PROXY_PORT = settings.AJAX_PROXY_PORT
+except AttributeError:
+    from rapidsms.contrib.ajax.settings import AJAX_PROXY_PORT
+    
+try:
+    AJAX_PROXY_HOST = settings.AJAX_PROXY_HOST
+except AttributeError:
+    from rapidsms.contrib.ajax.settings import AJAX_PROXY_HOST
+    
+
 from exceptions import DirectSmsError
 
 from rapidsms.contrib.ajax.utils import get_url_prefix
@@ -98,8 +110,7 @@ def send_msg(contact=None, text='',
         post_send_callback_kwargs = {'model': log_in_model}
 
     url = "http://%s:%s/%sdirect_sms/send_message" % (
-            settings.AJAX_PROXY_HOST, settings.AJAX_PROXY_PORT,
-            get_url_prefix())
+            AJAX_PROXY_HOST, AJAX_PROXY_PORT, get_url_prefix())
     
     data = {'text': text,
             'pre_send_callback': pickle.dumps(callback),
@@ -113,7 +124,7 @@ def send_msg(contact=None, text='',
     try:
         data['contact'] = contact.pk
     except AttributeError:
-        settings.AJAX_PROXY_HOST
+        pass
         
     data['backend'] = backend
     data['identity'] = identity
