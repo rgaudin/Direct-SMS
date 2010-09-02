@@ -43,7 +43,6 @@ def store_log(outgoing_message, model, field='message',
             model from the DB before processing. If save is True (default),
             the model will be saved.
         """
-        
         outoing_message = LOGGER_CLS.objects.get(pk=outgoing_message.logger_id)
         
         if reload_model:
