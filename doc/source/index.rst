@@ -20,8 +20,8 @@ Contents:
 Setup
 -----
 
-Copy / paste the entire direct_sms folder to the ./apps directory of your 
-project. Add 'direct_sms' in the app list of your local.ini file.
+Copy / paste the entire direct_sms folder in a directory in your Python Path.
+Add direct_sms to INSTALLED_APP.
 
 Usage
 ------
