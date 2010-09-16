@@ -32,7 +32,7 @@ except AttributeError:
 
 from exceptions import DirectSmsError
 
-from rapidsms.contrib.ajax.utils import get_url_prefix
+#from rapidsms.contrib.ajax.utils import get_url_prefix
 
 LOGGER_CLS =  None
 
@@ -47,6 +47,12 @@ try:
     from logger_ng.models import LoggedMessage as LOGGER_CLS
 except ImportError:
     pass
+
+
+def get_url_prefix():
+    ''' short circuit get_url_prefix until this goes into rsms core '''
+
+    return u""
 
         
 def store_log(outgoing_message, model, field='message', 
